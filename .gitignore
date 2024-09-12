@@ -1,0 +1,86 @@
+# development areas
+workbench/
+wip/
+test_files/
+linear_files/
+sample_files_all/
+obj/
+bin/
+backup/
+old/
+.deps/
+.vscode/
+lib/pcre2/
+data/
+profile.txt
+gmon.out
+TODO.txt
+times.csv
+examples/rtking
+examples/shh
+.bash_history
+*.log
+*.csv
+test_results/
+ast/
+*.do
+
+# to remove
+Makefile_old
+environment_old.mk
+
+# development files
+main.c
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
