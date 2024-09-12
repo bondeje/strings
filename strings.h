@@ -18,7 +18,13 @@ static inline ptrdiff_t String_len(String const * str) { return str->size; }
 static inline size_t String_capacity(String const * str) { return str->capacity; }
 
 _Bool String_is_empty(String const * str);
-_Bool String_in(String const * str, char val);
+int String_compare(String * a, String * b);
+// this is for compatibility with e.g. qsort. cannot be a macro because I need the address
+static inline int String_comp(void * a, void * b) {
+	return String_compare((String *)a, (String *)b);
+}
+_Bool String_in(String const * str, String const * restrict other);
+_Bool String_char_in(String const * str, char val);
 void String_lower(String * str);
 void String_upper(String * str);
 // can "fail". returns 0

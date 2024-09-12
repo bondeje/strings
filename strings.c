@@ -18,7 +18,40 @@ _Bool String_is_empty(String const * str) {
 	return str->size == 0;
 }
 
-_Bool String_in(String const * str, char val) {
+int String_compare(String * a, String * b) {
+	ptrdiff_t size_a = String_len(a);
+	ptrdiff_t size_b = String_len(b);
+	int result = 0;
+	if (size_a < size_b) {
+		if (!size_a) {
+			return -1;
+		}
+		result = strncmp(a->str, b->str, size_a);
+		if (!result) { // the first size_a characters match. a is a substring of b
+			result = -1;
+		}
+	} else if (size_a > size_b) {
+		if (!size_b) {
+			return 1;
+		}
+		result = strncmp(a->str, b->str, size_b);
+		if (!result) { // the first size_b characters match. b is a substring of a
+			result = 1;
+		}
+	} else {
+		if (!size_a) {
+			return 0;
+		}
+		result = strncmp(a->str, b->str, size_a);
+	}
+	return result;
+}
+
+_Bool String_in(String const * str, String const * restrict other) {
+	return 0 < String_count(str, other, 0, 0);
+}
+
+_Bool String_char_in(String const * str, char val) {
 	if (str->size <= 0) {
 		return false;
 	}
@@ -52,8 +85,7 @@ char String_get(String const * str, ptrdiff_t loc) {
 		return '\0';
 	}
 	if (loc < 0) {
-		// -(loc % str->size) because loc < 0 && str->size > 0 results in loc % str->size < 0
-		loc += str->size * (loc / str->size) - (loc % str->size);
+		loc = str->size - 1 + ((loc + 1) % str->size);
 	}
 	if (loc < str->size) {
 		return str->str[loc];
@@ -65,8 +97,7 @@ char String_set(String * str, ptrdiff_t loc, char val) {
 		return '\0';
 	}
 	if (loc < 0) {
-		// -(loc % str->size) because loc < 0 && str->size > 0 results in loc % str->size < 0
-		loc += str->size * (loc / str->size) - (loc % str->size);
+		loc = str->size - 1 + ((loc + 1) % str->size);
 	}
 	char out = '\0';
 	if (loc < str->size) {
@@ -120,11 +151,16 @@ int String_count(String const * str, String const * sub, ptrdiff_t start, ptrdif
 	}
 	ptrdiff_t loc = String_find(&(String){.str = str->str + start, .size = end - start}, 
 								sub, 0, end - start);
-	while (start < end && loc >= 0) {
+	while (loc >= 0) {
+		loc += start;
 		ct++;
-		start += loc;
-		loc = String_find(&(String){.str = str->str + start, .size = end - start}, 
-				          sub, 0, end - start);
+		if (loc < end - sub->size) {
+			start = loc + sub->size;
+			loc = String_find(&(String){.str = str->str + start, 
+					.size = end - start}, sub, 0, end - start);
+		} else {
+			loc = -1;
+		}
 	}
 	return ct;
 }
@@ -232,7 +268,7 @@ void String_lstrip(String * str, String const * restrict chars) {
 	}
 	ptrdiff_t itest = 0;
 	char * str_ = str->str;
-	while (itest < str->size && String_in(chars, str_[itest])) {
+	while (itest < str->size && String_char_in(chars, str_[itest])) {
 		itest++;
 	}
 	if (itest) {
@@ -252,7 +288,7 @@ void String_rstrip(String * str, String const * restrict chars) {
 		return;
 	}
 	char * str_ = str->str;
-	while (str->size > 0 && String_in(chars, str_[str->size - 1])) {
+	while (str->size > 0 && String_char_in(chars, str_[str->size - 1])) {
 		str->size--;
 	}
 }
@@ -262,6 +298,7 @@ void String_rstrip(String * str, String const * restrict chars) {
 
 // internal function. resizes without clearing (as opposed to String_init(., ., 0, 0)
 String * String_resize(String * str, size_t new_capacity) {
+
 	char * str_ = realloc(str->str, new_capacity);
 	if (!str_) {
 		return NULL;
