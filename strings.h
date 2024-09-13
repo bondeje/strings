@@ -20,6 +20,7 @@ static inline ptrdiff_t String_len(String const * str) { return str->size; }
 static inline size_t String_capacity(String const * str) { return str->capacity; }
 
 _Bool String_is_empty(String const * str);
+void String_clear(String * str);
 int String_compare(String const * a, String const * b);
 // this is for compatibility with e.g. qsort. cannot be a macro because I need the address
 static inline int String_comp(void const * a, void const * b) {
