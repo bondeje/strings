@@ -176,8 +176,8 @@ int test_String_lower(void) {
 		nerrors += CHECK(!String_compare(&test, static_strings + i),
 			"lowering failed. expected %s, found %.*s\n",
 			static_strings[i].str, (int)test.size, test.str);
+		String_dest(&test);
 	}
-	String_dest(&test);
 	verbose_end(nerrors);
 	return nerrors;
 
@@ -193,8 +193,8 @@ int test_String_upper(void) {
 		nerrors += CHECK(!String_compare(&test, static_upper + i),
 			"lowering failed. expected %s, found %.*s\n",
 			static_upper[i].str, (int)test.size, test.str);
+		String_dest(&test);
 	}
-	String_dest(&test);
 	verbose_end(nerrors);
 	return nerrors;
 }
@@ -243,6 +243,7 @@ int test_String_set(void) {
 			nerrors += CHECK(testc == String_get(&test, j),
 				"failed to set character at index %lld to %c in %s, found %c\n",
 				(long long)j, testc, static_strings[i].str, String_get(&test, j));
+			String_dest(&test);
 		}
 		for (ptrdiff_t j = -1; j > -size; j--) {
 			String_copy(&test, dynamic_strings + i);
@@ -254,14 +255,15 @@ int test_String_set(void) {
 			nerrors += CHECK(testc == String_get(&test, j),
 				"failed to set character at index %lld to %c in %s, found %c\n",
 				(long long)j, testc, static_strings[i].str, String_get(&test, j));
+			String_dest(&test);
 		}
 		String_copy(&test, dynamic_strings + i);
 		nerrors += CHECK('\0' == String_set(&test, size, testc),
 			"failed to retrieve correct character at index %lld for %.*s. expected (null), found %c\n",
 			(long long)size, (int)size, dynamic_strings[i].str,
 			String_get(dynamic_strings + i, size));
+		String_dest(&test);
 	}
-	String_dest(&test);
 	verbose_end(nerrors);
 	return nerrors;
 }
@@ -692,9 +694,12 @@ int test_String_strip(void) {
 	String test;
 	String_init(&test, str_orig, strlen(str_orig), 0);
 	String_strip(&test, NULL);
+	
 	nerrors += CHECK(!String_compare(&test, &(String){.str = (char *)str_result, .size = strlen(str_result)}),
 		"failed to strip from left and right. expected %s, found %.*s\n",
 		str_result, (int)test.size, test.str);
+
+	String_dest(&test);
 	verbose_end(nerrors);
 	return nerrors;
 }
@@ -830,8 +835,8 @@ int test_String_replace(void) {
 	String result1 = {.str = (char *)path_result1, .size = strlen(path_result1)};
 	String sep = {.str = "/", .size = 1};
 	String rep = {.str = "\\", .size = 1};
-	String test;
-	String_init(&test, path_raw, strlen(path_raw), 0);
+	String test = {0};
+	String_init(&test, path_raw, strlen(path_raw), strlen(path_raw));
 	
 	nerrors += CHECK(2 == String_replace(&test, &sep, &rep, 0),
 		"failed to replace all %c with %c. expected %d, found %d\n",
@@ -841,7 +846,7 @@ int test_String_replace(void) {
 		"failed to replace all %c with %c. expected %s, found %.*s\n",
 		'/', '\\', path_result, (int)test.size, test.str);
 
-	String_init(&test, path_raw, strlen(path_raw), 0);
+	String_init(&test, path_raw, strlen(path_raw), test.capacity);
 
 	nerrors += CHECK(1 == String_replace(&test, &sep, &rep, 1),
 		"failed to replace all %c with %c. expected %d, found %d\n",
