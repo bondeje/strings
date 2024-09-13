@@ -23,6 +23,10 @@ _Bool String_is_empty(String const * str) {
 	return str->size == 0;
 }
 
+void String_clear(String * str) {
+	str->size = 0;
+}
+
 int String_compare(String const * a, String const * b) {
 	ptrdiff_t size_a = String_len(a);
 	ptrdiff_t size_b = String_len(b);
@@ -303,9 +307,6 @@ void String_rstrip(String * str, String const * restrict chars) {
 
 // internal function. resizes without clearing (as opposed to String_init(., ., 0, 0)
 String * String_resize(String * str, size_t new_capacity) {
-	if (!str->capacity) { // string was not alloc'd
-		return NULL;
-	}
 	char * str_ = realloc(str->str, new_capacity);
 	if (!str_) {
 		return NULL;
@@ -315,6 +316,7 @@ String * String_resize(String * str, size_t new_capacity) {
 	return str;
 }
 
+// need to rework this garbage
 void String_init(String * restrict str, char const * restrict buf, ptrdiff_t size, size_t capacity) {
 	if (size) { // a buffer was provided
 		if (!capacity) { // no allocated capacity in String
@@ -353,10 +355,14 @@ void String_init(String * restrict str, char const * restrict buf, ptrdiff_t siz
 		}
 	}
 	if (str->str) { // memory allocations succeeded
-		*str = (String) {
-			.str = memcpy(str->str, buf, size * sizeof(char)),
-			.size = size,
-			.capacity = capacity
+		if (buf) {
+			*str = (String) {
+				.str = memcpy(str->str, buf, size * sizeof(char)),
+				.size = size,
+				.capacity = capacity
+			};
+		} else {
+			str->capacity = capacity;
 		};
 	}
 }
@@ -523,39 +529,33 @@ String * String_new(char const * buf, size_t size, size_t capacity) {
 	String_init(str, buf, size, capacity);
 	return str;
 }
-// separate on whitespace if sep is NULL. Returns NULL if no split
-String * String_split(String * str, String * restrict sep, ptrdiff_t * restrict nsplit) {
+// separate on whitespace if sep is NULL. Returns number of elements of dest filled
+ptrdiff_t String_split(ptrdiff_t nsplit, String * restrict dest, String * restrict str, String * restrict sep) {
 	ptrdiff_t N = String_len(str);
-	int count = String_count(str, sep, 0, N);
-	if (!count) {
-		*nsplit = 1;
-		return String_new(str->str, str->size, (size_t)str->size);
+
+	if (nsplit < 1) {
+		return -1;
 	}
-	String * out = calloc(count + 1, sizeof(String));
-	if (!out) {
-		*nsplit = 0;
-		return NULL;
-	}
+
 	ptrdiff_t sep_size = String_len(sep);
 	ptrdiff_t start = 0;
-	ptrdiff_t loc = String_find(str, sep, start, N);
+	ptrdiff_t loc = String_find(str, sep, start, N);	
 	ptrdiff_t j = 0;
-	String_init(out + j++, str->str + start, loc - start, 0);
-	while (j < count) {
+	while (j < nsplit && loc >= 0) {
+		String_init(dest + j++, str->str + start, loc - start, 0);
 		start = loc + sep_size;
 		loc = String_find(str, sep, start, N);
-		String_init(out + j++, str->str + start, loc - start, 0);
 	}
-	start = loc + sep_size;
-	String_init(out + j++, str->str + start, N - start, 0);
-	*nsplit = j;
-	return out;
+	if (j < nsplit && start < N) {
+		String_init(dest + j++, str->str + start, N - start, 0);
+	}
+	return j;
 }
-String * String_join(String const * restrict sep, ptrdiff_t n, 
+int String_join(String * restrict dest, String const * restrict sep, ptrdiff_t n, 
 	String const * const restrict strings) {
 
 	if (!n) {
-		return NULL;
+		return -1;
 	}
 
 	if (!sep) {
@@ -567,15 +567,16 @@ String * String_join(String const * restrict sep, ptrdiff_t n,
 	for (ptrdiff_t i = 0; i < n; i++) {
 		min_size += String_len(strings + i);
 	}
-	String * out = String_new(strings[0].str, strings[0].size, 0);
-	if (!String_resize(out, min_size)) {
-		return NULL;
+	if (!String_resize(dest, min_size)) {
+		return -1;
 	}
+	String_clear(dest);
+	String_extend(dest, strings + 0);
 	for (ptrdiff_t j = 1; j < n; j++) {
-		String_extend(out, sep);
-		String_extend(out, strings + j);
+		String_extend(dest, sep);
+		String_extend(dest, strings + j);
 	}
-	return out;
+	return 0;
 }
 char * String_cstr(String * str) {
 	if (String_append(str, '\0') < 0) {
@@ -583,4 +584,45 @@ char * String_cstr(String * str) {
 	}
 	str->size--; // the null-terminator that was append is not part of the string itself
 	return str->str;
+}
+
+int String_slice(String * restrict dest, String const * restrict str, ptrdiff_t start, ptrdiff_t end, ptrdiff_t step) {
+	if (step == 0) {
+		step = 1;
+	}
+	ptrdiff_t N = String_len(str);
+	int dir = step > 0 ? 1 : -1;
+	if (dir > 0 && end == 0) {
+		end = N;
+	}
+	if (start < 0) {
+		start = N - 1 + ((start + 1) % N);
+	}
+	if (end < 0) {
+		end = N + ((end + 1) % N);
+	}
+	// special case of end originally being -1
+	if (dir < 0) {
+		if (end == N) {
+			end = -1;
+		}
+	}
+	if ((dir < 0 && end >= start) || (dir > 0 && end <= start)) {
+		return -1;
+	}
+	
+	size_t nchars = (end - start - dir) / step + 1;
+	String_resize(dest, nchars);
+	String_clear(dest);
+	if (!dest->str) {
+		return -1;
+	}
+	char const * str_ = str->str;
+	for ( ; 0 < (end - start) * dir; start += step) {
+		if (String_append(dest, str_[start])) {
+			String_del(dest);
+			return -1;
+		}
+	}
+	return 0;
 }

@@ -870,17 +870,18 @@ int test_String_split(void) {
 	String sep = {.str = "/", .size = 1};
 	String input = {.str = (char *)path_raw, .size = strlen(path_raw)};
 
-	ptrdiff_t ntest = 0;
-	String * test = String_split(&input, &sep, &ntest);
+	ptrdiff_t ntest = 3;
+	String test[3] = {0};
+	ptrdiff_t count = String_split(ntest, &test[0], &input, &sep);
 
-	nerrors += CHECK(NULL != test, "split failed\n", "");
+	nerrors += CHECK(3 == count, "split failed\n", "");
 	if (nerrors) {
 		return nerrors;
 	}
 	
-	nerrors += CHECK(ntest == nresults,
+	nerrors += CHECK(3 == count,
 		"failed to split %s by %s to the correct number. expected %d, found %d\n",
-		path_raw, "/", nresults, (int)ntest);
+		path_raw, "/", 3, count);
 
 	for (int i = 0; i < nresults; i++) {
 		nerrors += CHECK(!String_compare(&results[i], &test[i]),
@@ -889,7 +890,6 @@ int test_String_split(void) {
 		String_dest(&test[i]);
 	}
 
-	free(test);
 	verbose_end(nerrors);
 	return nerrors;
 }
@@ -907,18 +907,85 @@ int test_String_join(void) {
 	int ninputs = sizeof(inputs) / sizeof(inputs[0]);
 	String sep = {.str = "/", .size = 1};
 	
-	String * test = String_join(&sep, ninputs, inputs);
+	String test = {0};
+	int status = String_join(&test, &sep, ninputs, inputs);
 
-	nerrors += CHECK(NULL != test, "join failed\n", "");
+	nerrors += CHECK(-1 != status, "join failed\n", "");
 	if (nerrors) {
 		return nerrors;
 	}
 	
-	nerrors += CHECK(!String_compare(test, &(String){.str = (char *)path_raw, strlen(path_raw)}),
+	nerrors += CHECK(!String_compare(&test, &(String){.str = (char *)path_raw, strlen(path_raw)}),
 		"failed to join strings. expected %s, found %.*s\n",
-		path_raw, (int)test->size, test->str);
+		path_raw, (int)test.size, test.str);
 
-	String_del(test);
+	String_dest(&test);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_slice(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	String test = {0};
+
+	String src = {
+		.str = "I am the very model of a modern major general",
+		.size = 45
+	};
+
+	String sl002 = {
+		.str = "Ia h eymdlo  oenmjrgnrl",
+		.size = 23
+	};
+	nerrors += -1 * String_slice(&test, &src, 0, 0, 2);
+	nerrors += CHECK(!String_compare(&test, &sl002),
+		"failed to slice '%.*s'[%d:%d:%d]. expected '%.*s', found '%.*s'\n",
+		(int)src.size, src.str, 0, 0, 2,
+		(int)sl002.size, sl002.str, (int)test.size, test.str);
+
+	String sl0442 = {
+		.str = "Ia h eymdlo  oenmjrgnr",
+		.size = 22
+	};
+	nerrors += -1 * String_slice(&test, &src, 0, 44, 2);
+	nerrors += CHECK(!String_compare(&test, &sl0442),
+		"failed to slice '%.*s'[%d:%d:%d]. expected '%.*s', found '%.*s'\n",
+		(int)src.size, src.str, 0, 44, 2,
+		(int)sl0442.size, sl0442.str, (int)test.size, test.str);
+
+	String sl102 = {
+		.str = " mtevr oe famdr ao eea",
+		.size = 22
+	};
+	nerrors += -1 * String_slice(&test, &src, 1, 0, 2);
+	nerrors += CHECK(!String_compare(&test, &sl102),
+		"failed to slice '%.*s'[%d:%d:%d]. expected '%.*s', found '%.*s'\n",
+		(int)src.size, src.str, 1, 0, 2,
+		(int)sl102.size, sl102.str, (int)test.size, test.str);
+
+	String sl1432 = {
+		.str = " mtevr oe famdr ao ee",
+		.size = 21
+	};
+	nerrors += -1 * String_slice(&test, &src, 1, 43, 2);
+	nerrors += CHECK(!String_compare(&test, &sl1432),
+		"failed to slice '%.*s'[%d:%d:%d]. expected '%.*s', found '%.*s'\n",
+		(int)src.size, src.str, 1, 43, 2,
+		(int)sl1432.size, sl1432.str, (int)test.size, test.str);
+
+	String sl44m1m1 = {
+		.str = "lareneg rojam nredom a fo ledom yrev eht ma I",
+		.size = 45
+	};
+	nerrors += -1 * String_slice(&test, &src, 44, -1, -1);
+	nerrors += CHECK(!String_compare(&test, &sl44m1m1),
+		"failed to slice '%.*s'[%d:%d:%d]. expected '%.*s', found '%.*s'\n",
+		(int)src.size, src.str, 44, -1, -1,
+		(int)sl44m1m1.size, sl44m1m1.str, (int)test.size, test.str);
+
+	String_dest(&test);
 	verbose_end(nerrors);
 	return nerrors;
 }
@@ -965,6 +1032,7 @@ int main(int narg, char ** args) {
 	nerrors += test_String_replace();
 	nerrors += test_String_split();
 	nerrors += test_String_join();
+	nerrors += test_String_slice();
 	nerrors += test_tear_down();
 	return nerrors;
 }

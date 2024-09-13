@@ -63,15 +63,16 @@ int String_append(String * str, char chr);
 int String_extend(String * restrict str, String const * restrict other);
 int String_replace(String * str, String const * restrict old, String const * restrict new, 
 	int count);
+// returns NULL if a null-terminator could not be added
+char * String_cstr(String * str);
+// separate on whitespace if sep is NULL
+ptrdiff_t String_split(ptrdiff_t nsplit, String * restrict dest, String * restrict str, String * restrict sep);
+int String_join(String * restrict dest, String const * restrict sep, ptrdiff_t n, 
+	String const * const restrict strings);
+// step == 0 is used as step == 1, if step > 0 and end == 0, String_len is used as end
+int String_slice(String * restrict dest, String const * restrict str, ptrdiff_t start, ptrdiff_t end, ptrdiff_t step);
 
 // allocates upon return
 String * String_new(char const * buf, size_t size, size_t capacity);
-// separate on whitespace if sep is NULL
-String * String_split(String * str, String * restrict sep, ptrdiff_t * restrict nsplit);
-String * String_join(String const * restrict sep, ptrdiff_t n, 
-	String const * const restrict strings);
-char * String_cstr(String * str);
-
-// TODO: add String_slice
 
 #endif
