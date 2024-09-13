@@ -3,7 +3,7 @@
 CC = gcc
 
 STDC = -std=c99
-CFLAGS = -Wall -Wextra -Wno-unused-parameter $(STDC)
+CFLAGS = -Wall -Wextra -Wno-unused -Wno-unused-parameter -pedantic $(STDC)
 DBG_CFLAGS = $(CFLAGS) -O0 -g3
 
 OBJS = strings.o

@@ -345,6 +345,208 @@ int test_String_ends_with(void) {
 	return nerrors;
 }
 
+int test_String_find(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	String tests[] = {
+		{.str = "a", .size = 1},
+		{.str = "b", .size = 1},
+		{.str = "c", .size = 1},
+		{.str = "m", .size = 1}
+	};
+
+	int ntests = sizeof(tests) / sizeof(tests[0]);
+	int results[][sizeof(tests) / sizeof(tests[0])] = {
+		{-1, -1, -1, -1}, // ""
+		{ 0, -1, -1, -1}, // "a"
+		{ 0, -1, -1, -1}, // "aa"
+		{ 0, -1, -1, -1}, // "aaa"
+		{ 0,  1, -1, -1}, // "ab"
+		{ 0,  1, -1, -1}, // "abab"
+		{ 0,  1, -1, -1}, // "ababab"
+		{ 0,  1,  2, -1}, // "abc"
+		{ 0,  1,  2, -1}, // "abcabc"
+		{ 0,  1,  2, -1}, // "abcabcabc"
+		{ 2, -1, -1,  3}, // "I am the very model of a modern major general"
+		{-1, -1, -1, -1}, // NULL
+	};
+	int nresults = sizeof(results) / sizeof(results[0]);
+	
+	int start = 0;
+	int end = 0;
+	for (int i = 0; i < nresults; i++) {
+		for (int j = 0; j < ntests; j++) {
+			end = (int)static_strings[i].size;
+			nerrors += CHECK(results[i][j] == String_find(static_strings + i, &tests[j], start, end),
+				"failed to find %.*s at loc %d in '%.*s'\n", 
+				(int)tests[j].size, tests[j].str, results[i][j], 
+				end - start, static_strings[i].str + start);
+		}
+	}
+
+	int results_half[][sizeof(tests) / sizeof(tests[0])] = {
+		{-1, -1, -1, -1}, // ""
+		{ 0, -1, -1, -1}, // "a"
+		{ 1, -1, -1, -1}, // "aa"
+		{ 1, -1, -1, -1}, // "aaa"
+		{-1,  1, -1, -1}, // "ab"
+		{ 2,  3, -1, -1}, // "abab"
+		{ 4,  3, -1, -1}, // "ababab"
+		{-1,  1,  2, -1}, // "abc"
+		{ 3,  4,  5, -1}, // "abcabc"
+		{ 6,  4,  5, -1}, // "abcabcabc"
+		{23, -1, -1, 25}, // "I am the very model of a modern major general"
+		{-1, -1, -1, -1}, // NULL
+	};
+	nresults = sizeof(results_half) / sizeof(results_half[0]);
+
+	for (int i = 0; i < nresults; i++) {
+		for (int j = 0; j < ntests; j++) {
+			end = (int)static_strings[i].size;
+			start = end / 2;
+			nerrors += CHECK(results_half[i][j] == String_find(static_strings + i, &tests[j], start, end),
+				"failed to find %.*s at loc %d in '%.*s'\n", 
+				(int)tests[j].size, tests[j].str, results_half[i][j], 
+				end - start, static_strings[i].str + start);
+		}
+	}
+
+	int results_end[][sizeof(tests) / sizeof(tests[0])] = {
+		{-1, -1, -1, -1}, // ""
+		{ 0, -1, -1, -1}, // "a"
+		{ 0, -1, -1, -1}, // "aa"
+		{ 0, -1, -1, -1}, // "aaa"
+		{ 0, -1, -1, -1}, // "ab"
+		{ 0,  1, -1, -1}, // "abab"
+		{ 0,  1, -1, -1}, // "ababab"
+		{ 0, -1, -1, -1}, // "abc"
+		{ 0,  1,  2, -1}, // "abcabc"
+		{ 0,  1,  2, -1}, // "abcabcabc"
+		{ 2, -1, -1,  3}, // "I am the very model of a modern major general"
+		{-1, -1, -1, -1}, // NULL
+	};
+	nresults = sizeof(results_end) / sizeof(results_end[0]);
+
+	start = 0;
+	for (int i = 0; i < nresults; i++) {
+		for (int j = 0; j < ntests; j++) {
+			end = ((int)static_strings[i].size) / 2;
+			if (!end && static_strings[i].size) {
+				end++;
+			}
+			nerrors += CHECK(results_end[i][j] == String_find(static_strings + i, &tests[j], start, end),
+				"failed to find %.*s at loc %d in '%.*s'\n", 
+				(int)tests[j].size, tests[j].str, results_end[i][j], 
+				end - start, static_strings[i].str + start);
+		}
+	}
+	
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_rfind(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	String tests[] = {
+		{.str = "a", .size = 1},
+		{.str = "b", .size = 1},
+		{.str = "c", .size = 1},
+		{.str = "m", .size = 1}
+	};
+
+	int ntests = sizeof(tests) / sizeof(tests[0]);
+	int results[][sizeof(tests) / sizeof(tests[0])] = {
+		{-1, -1, -1, -1}, // ""
+		{ 0, -1, -1, -1}, // "a"
+		{ 1, -1, -1, -1}, // "aa"
+		{ 2, -1, -1, -1}, // "aaa"
+		{ 0,  1, -1, -1}, // "ab"
+		{ 2,  3, -1, -1}, // "abab"
+		{ 4,  5, -1, -1}, // "ababab"
+		{ 0,  1,  2, -1}, // "abc"
+		{ 3,  4,  5, -1}, // "abcabc"
+		{ 6,  7,  8, -1}, // "abcabcabc"
+		{43, -1, -1, 32}, // "I am the very model of a modern major general"
+		{-1, -1, -1, -1}, // NULL
+	};
+	int nresults = sizeof(results) / sizeof(results[0]);
+	
+	int start = 0;
+	int end = 0;
+	for (int i = 0; i < nresults; i++) {
+		for (int j = 0; j < ntests; j++) {
+			end = (int)static_strings[i].size;
+			nerrors += CHECK(results[i][j] == String_rfind(static_strings + i, &tests[j], start, end),
+				"failed to find %.*s at loc %d in '%.*s'\n", 
+				(int)tests[j].size, tests[j].str, results[i][j], 
+				end - start, static_strings[i].str + start);
+		}
+	}
+
+	int results_half[][sizeof(tests) / sizeof(tests[0])] = {
+		{-1, -1, -1, -1}, // ""
+		{ 0, -1, -1, -1}, // "a"
+		{ 1, -1, -1, -1}, // "aa"
+		{ 2, -1, -1, -1}, // "aaa"
+		{-1,  1, -1, -1}, // "ab"
+		{ 2,  3, -1, -1}, // "abab"
+		{ 4,  5, -1, -1}, // "ababab"
+		{-1,  1,  2, -1}, // "abc"
+		{ 3,  4,  5, -1}, // "abcabc"
+		{ 6,  7,  8, -1}, // "abcabcabc"
+		{43, -1, -1, 32}, // "I am the very model of a modern major general"
+		{-1, -1, -1, -1}, // NULL
+	};
+	nresults = sizeof(results_half) / sizeof(results_half[0]);
+
+	for (int i = 0; i < nresults; i++) {
+		for (int j = 0; j < ntests; j++) {
+			end = (int)static_strings[i].size;
+			start = end / 2;
+			nerrors += CHECK(results_half[i][j] == String_rfind(static_strings + i, &tests[j], start, end),
+				"failed to find %.*s at loc %d in '%.*s'\n", 
+				(int)tests[j].size, tests[j].str, results_half[i][j], 
+				end - start, static_strings[i].str + start);
+		}
+	}
+
+	int results_end[][sizeof(tests) / sizeof(tests[0])] = {
+		{-1, -1, -1, -1}, // ""
+		{ 0, -1, -1, -1}, // "a"
+		{ 0, -1, -1, -1}, // "aa"
+		{ 0, -1, -1, -1}, // "aaa"
+		{ 0, -1, -1, -1}, // "ab"
+		{ 0,  1, -1, -1}, // "abab"
+		{ 2,  1, -1, -1}, // "ababab"
+		{ 0, -1, -1, -1}, // "abc"
+		{ 0,  1,  2, -1}, // "abcabc"
+		{ 3,  1,  2, -1}, // "abcabcabc"
+		{ 2, -1, -1, 14}, // "I am the very model of a modern major general"
+		{-1, -1, -1, -1}, // NULL
+	};
+	nresults = sizeof(results_end) / sizeof(results_end[0]);
+
+	start = 0;
+	for (int i = 0; i < nresults; i++) {
+		for (int j = 0; j < ntests; j++) {
+			end = ((int)static_strings[i].size) / 2;
+			if (!end && static_strings[i].size) {
+				end++;
+			}
+			nerrors += CHECK(results_end[i][j] == String_rfind(static_strings + i, &tests[j], start, end),
+				"failed to find %.*s at loc %d in '%.*s'\n", 
+				(int)tests[j].size, tests[j].str, results_end[i][j], 
+				end - start, static_strings[i].str + start);
+		}
+	}
+	
+	verbose_end(nerrors);
+	return nerrors;
+}
+
 int test_String_count(void) {
 	verbose_start(__func__);
 	int nerrors = 0;
@@ -411,7 +613,312 @@ int test_String_count(void) {
 				end - start, static_strings[i].str + start);
 		}
 	}
+
+	int results_end[][sizeof(tests) / sizeof(tests[0])] = {
+		{0, 0, 0, 0}, // ""
+		{1, 0, 0, 0}, // "a"
+		{1, 0, 0, 0}, // "aa"
+		{1, 0, 0, 0}, // "aaa"
+		{1, 0, 0, 0}, // "ab"
+		{1, 1, 0, 0}, // "abab"
+		{2, 1, 0, 0}, // "ababab"
+		{1, 0, 0, 0}, // "abc"
+		{1, 1, 1, 0}, // "abcabc"
+		{2, 1, 1, 0}, // "abcabcabc"
+		{1, 0, 0, 2}, // "I am the very model of a modern major general"
+		{0, 0, 0, 0}, // NULL
+	};
+	nresults = sizeof(results_end) / sizeof(results_end[0]);
+
+	start = 0;
+	for (int i = 0; i < nresults; i++) {
+		for (int j = 0; j < ntests; j++) {
+			end = ((int)static_strings[i].size) / 2;
+			if (!end && static_strings[i].size) {
+				end++;
+			}
+			nerrors += CHECK(results_end[i][j] == String_count(static_strings + i, &tests[j], start, end),
+				"failed to find %d copies of %.*s in '%.*s'\n", 
+				results_end[i][j], (int)tests[j].size, tests[j].str,
+				end - start, static_strings[i].str + start);
+		}
+	}
 	
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_lstrip(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+	char const * str_orig = " \t\f\n\r\vHello, World \t\f\n\r\v";
+	char const * str_result = "Hello, World \t\f\n\r\v";
+	String test;
+	String_init(&test, str_orig, strlen(str_orig), 0);
+	String_lstrip(&test, NULL);
+
+	nerrors += CHECK(!String_compare(&test, &(String){.str = (char *)str_result, .size = strlen(str_result)}),
+		"failed to strip from left and right. expected %s, found %.*s\n",
+		str_result, (int)test.size, test.str);
+
+	String_dest(&test);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_rstrip(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+	char const * str_orig = " \t\f\n\r\vHello, World \t\f\n\r\v";
+	char const * str_result = " \t\f\n\r\vHello, World";
+	String test;
+	String_init(&test, str_orig, strlen(str_orig), 0);
+	String_rstrip(&test, NULL);
+
+	nerrors += CHECK(!String_compare(&test, &(String){.str = (char *)str_result, .size = strlen(str_result)}),
+		"failed to strip from left and right. expected %s, found %.*s\n",
+		str_result, (int)test.size, test.str);
+
+	String_dest(&test);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_strip(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+	char const * str_orig = " \t\f\n\r\vHello, World \t\f\n\r\v";
+	char const * str_result = "Hello, World";
+	String test;
+	String_init(&test, str_orig, strlen(str_orig), 0);
+	String_strip(&test, NULL);
+	nerrors += CHECK(!String_compare(&test, &(String){.str = (char *)str_result, .size = strlen(str_result)}),
+		"failed to strip from left and right. expected %s, found %.*s\n",
+		str_result, (int)test.size, test.str);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_rpartition(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	char const * path_raw = "path/to/file";
+	String const file_result = {.str = "file", .size = 4};
+	String const path_result = {.str = "path/to", .size = 7};
+	String path = {.str = (char *)path_raw, .size = strlen(path_raw)};
+	String file;
+	String sep = {.str = "/", .size = 1};
+	String_rpartition(&path, &sep, &file);
+
+	nerrors += CHECK(!String_compare(&path, &path_result),
+		"failed to retrieve prefix in rpartition. expected %.*s, found %.*s\n",
+		(int)path_result.size, path_result.str,
+		(int)path.size, path.str);
+	nerrors += CHECK(!String_compare(&file, &file_result),
+		"failed to retrieve suffix in rpartition. expected %.*s, found %.*s\n",
+		(int)file_result.size, file_result.str,
+		(int)file.size, file.str);
+	
+	String_dest(&file);
+	verbose_end(nerrors);
+	return nerrors;	
+}
+
+int test_String_partition(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	char const * path_raw = "path/to/file";
+	String const file_result = {.str = "to/file", .size = 7};
+	String const path_result = {.str = "path", .size = 4};
+	String path = {.str = (char *)path_raw, .size = strlen(path_raw)};
+	String file;
+	String sep = {.str = "/", .size = 1};
+	String_partition(&path, &sep, &file);
+
+	nerrors += CHECK(!String_compare(&path, &path_result),
+		"failed to retrieve prefix in rpartition. expected %.*s, found %.*s\n",
+		(int)path_result.size, path_result.str,
+		(int)path.size, path.str);
+	nerrors += CHECK(!String_compare(&file, &file_result),
+		"failed to retrieve suffix in rpartition. expected %.*s, found %.*s\n",
+		(int)file_result.size, file_result.str,
+		(int)file.size, file.str);
+
+	String_dest(&file);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_expand_tabs(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	char const * craw = "\tindented\n\titems";
+	char const * cresult = "    indented\n    items";
+	String const tab = {.str = "\t", .size = 1};
+	String const raw = {.str = (char *)craw, .size = strlen(craw)};
+	String result;
+	String_init(&result, craw, strlen(craw), 0);
+	int ntabs_result = String_count(&raw, &tab, 0, 0);
+	int ntabs = String_expand_tabs(&result, 4);
+
+	nerrors += CHECK(ntabs == ntabs_result,
+		"failed to find all the tabs in %s. expected %d, found %d\n",
+		craw, ntabs_result, ntabs);
+
+	nerrors += CHECK(!String_compare(&result, &(String){.str = (char *)cresult, .size = strlen(cresult)}),
+		"failed to expand tabs properly 1 tab = %d spaces. expected %s, found %.*s\n",
+		4, cresult, (int)result.size, result.str);
+
+	String_dest(&result);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_append(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+	char const * hw = "Hello, World";
+	String test;
+	String_init(&test, hw, 1, 0); // initialize with first element
+	for (size_t i = 1; i < strlen(hw); i++) {
+		nerrors += -1 * String_append(&test, hw[i]);
+	}
+
+	nerrors += CHECK(!String_compare(&test, &(String){.str = (char *)hw, .size = strlen(hw)}),
+		"failed to append to string. expected %s, found %.*s\n",
+		hw, (int)test.size, test.str);
+
+	String_dest(&test);
+
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_extend(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	char const * h = "Hello,";
+	char const * w = " World";
+	char const * hw = "Hello, World";
+	String a;
+	String_init(&a, h, strlen(h), 0);
+	String b = {.str = (char *)w, .size = strlen(w)};
+
+	nerrors += -1 * String_extend(&a, &b);
+
+	nerrors += CHECK(!String_compare(&a, &(String){.str = (char *)hw, .size = strlen(hw)}),
+		"failed to extend %s to %s. expected %s, found %.*s\n",
+		h, w, hw, (int)a.size, a.str);
+
+	String_dest(&a);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_replace(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	char const * path_raw = "path/to/file";
+	char const * path_result = "path\\to\\file";
+	char const * path_result1 = "path\\to/file";
+	String result = {.str = (char *)path_result, .size = strlen(path_result)};
+	String result1 = {.str = (char *)path_result1, .size = strlen(path_result1)};
+	String sep = {.str = "/", .size = 1};
+	String rep = {.str = "\\", .size = 1};
+	String test;
+	String_init(&test, path_raw, strlen(path_raw), 0);
+	
+	nerrors += CHECK(2 == String_replace(&test, &sep, &rep, 0),
+		"failed to replace all %c with %c. expected %d, found %d\n",
+		'/', '\\', 2);
+
+	nerrors += CHECK(!String_compare(&test, &result),
+		"failed to replace all %c with %c. expected %s, found %.*s\n",
+		'/', '\\', path_result, (int)test.size, test.str);
+
+	String_init(&test, path_raw, strlen(path_raw), 0);
+
+	nerrors += CHECK(1 == String_replace(&test, &sep, &rep, 1),
+		"failed to replace all %c with %c. expected %d, found %d\n",
+		'/', '\\', 1);
+
+	nerrors += CHECK(!String_compare(&test, &result1),
+		"failed to replace all %c with %c. expected %s, found %.*s\n",
+		'/', '\\', path_result1, (int)test.size, test.str);
+
+	String_dest(&test);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_split(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	char const * path_raw = "path/to/file";
+	String results[] = {
+		{.str = "path", .size = 4},
+		{.str = "to", .size = 2},
+		{.str = "file", .size = 4}
+	};
+	int nresults = sizeof(results) / sizeof(results[0]);
+	String sep = {.str = "/", .size = 1};
+	String input = {.str = (char *)path_raw, .size = strlen(path_raw)};
+
+	ptrdiff_t ntest = 0;
+	String * test = String_split(&input, &sep, &ntest);
+
+	nerrors += CHECK(NULL != test, "split failed\n", "");
+	if (nerrors) {
+		return nerrors;
+	}
+	
+	nerrors += CHECK(ntest == nresults,
+		"failed to split %s by %s to the correct number. expected %d, found %d\n",
+		path_raw, "/", nresults, (int)ntest);
+
+	for (int i = 0; i < nresults; i++) {
+		nerrors += CHECK(!String_compare(&results[i], &test[i]),
+			"%d-th split is incorrect. expected %.*s, found %.*s\n",
+			i, (int)results[i].size, results[i].str, (int)test[i].size, test[i].str);
+		String_dest(&test[i]);
+	}
+
+	free(test);
+	verbose_end(nerrors);
+	return nerrors;
+}
+
+int test_String_join(void) {
+	verbose_start(__func__);
+	int nerrors = 0;
+
+	char const * path_raw = "path/to/file";
+	String inputs[] = {
+		{.str = "path", .size = 4},
+		{.str = "to", .size = 2},
+		{.str = "file", .size = 4}
+	};
+	int ninputs = sizeof(inputs) / sizeof(inputs[0]);
+	String sep = {.str = "/", .size = 1};
+	
+	String * test = String_join(&sep, ninputs, inputs);
+
+	nerrors += CHECK(NULL != test, "join failed\n", "");
+	if (nerrors) {
+		return nerrors;
+	}
+	
+	nerrors += CHECK(!String_compare(test, &(String){.str = (char *)path_raw, strlen(path_raw)}),
+		"failed to join strings. expected %s, found %.*s\n",
+		path_raw, (int)test->size, test->str);
+
+	String_del(test);
 	verbose_end(nerrors);
 	return nerrors;
 }
@@ -444,7 +951,20 @@ int main(int narg, char ** args) {
 	nerrors += test_String_set();
 	nerrors += test_String_starts_with();
 	nerrors += test_String_ends_with();
+	nerrors += test_String_find();
+	nerrors += test_String_rfind();
 	nerrors += test_String_count();
+	nerrors += test_String_lstrip();
+	nerrors += test_String_rstrip();
+	nerrors += test_String_strip();
+	nerrors += test_String_partition();
+	nerrors += test_String_rpartition();
+	nerrors += test_String_expand_tabs();
+	nerrors += test_String_append();
+	nerrors += test_String_extend();
+	nerrors += test_String_replace();
+	nerrors += test_String_split();
+	nerrors += test_String_join();
 	nerrors += test_tear_down();
 	return nerrors;
 }

@@ -12,13 +12,18 @@ String const WHITESPACE = {
 	.size = 6
 };
 
+String const EMPTY_STRING = {
+	.str = "",
+	.size = 0
+};
+
 #define UPPER_TO_LOWER_OFFSET 32
 
 _Bool String_is_empty(String const * str) {
 	return str->size == 0;
 }
 
-int String_compare(String * a, String * b) {
+int String_compare(String const * a, String const * b) {
 	ptrdiff_t size_a = String_len(a);
 	ptrdiff_t size_b = String_len(b);
 	int result = 0;
@@ -298,7 +303,9 @@ void String_rstrip(String * str, String const * restrict chars) {
 
 // internal function. resizes without clearing (as opposed to String_init(., ., 0, 0)
 String * String_resize(String * str, size_t new_capacity) {
-
+	if (!str->capacity) { // string was not alloc'd
+		return NULL;
+	}
 	char * str_ = realloc(str->str, new_capacity);
 	if (!str_) {
 		return NULL;
@@ -315,17 +322,21 @@ void String_init(String * restrict str, char const * restrict buf, ptrdiff_t siz
 			*str = (String) {
 				.str = calloc(capacity,  sizeof(char)),
 			};
-		} else { // previous allocation exists...overwriting
+		} else { // this is fucked up
 			if (capacity < (size_t)size) { // reallocation is necessary
 				capacity = (size_t)size == SIZE_MAX ? size : size + 1;
-				char * str_ = realloc(str->str, sizeof(char) * capacity);
-				if (!str_) { // reallocation failed. freeing memory and marking failure
-					free(str->str);
-					*str = (String) {0};
-				} else {
-					str->str = str_;
-				}
 			}
+			char * str_ = NULL;
+			if (str->capacity) {
+				if (str->capacity < capacity) {
+					str_ = realloc(str->str, sizeof(char) * capacity);
+				} else {
+					str_ = str->str;
+				}
+			} else {
+				str_ = malloc(capacity * sizeof(char));
+			}
+			str->str = str_;
 		}
 	} else { // a buffer was not provided
 		if (capacity) { // resize the capacity of the underlying buffer
@@ -450,7 +461,8 @@ int String_extend(String * restrict str, String const * restrict other) {
 	}
 	// at this point, str has sufficient capacity
 	memcpy(str->str + str->size, other->str, other->size * sizeof(char));
-	return other->size;
+	str->size += other->size;
+	return 0;
 }
 
 // TODO: here
@@ -498,7 +510,7 @@ int String_replace(String * str, String const * restrict old,
 		read = next;
 	}
 
-	return nold;
+	return count;
 }
 
 // allocates upon return
@@ -507,6 +519,7 @@ String * String_new(char const * buf, size_t size, size_t capacity) {
 	if (!str) {
 		return NULL;
 	}
+	*str = (String){0};
 	String_init(str, buf, size, capacity);
 	return str;
 }
@@ -527,34 +540,40 @@ String * String_split(String * str, String * restrict sep, ptrdiff_t * restrict 
 	ptrdiff_t start = 0;
 	ptrdiff_t loc = String_find(str, sep, start, N);
 	ptrdiff_t j = 0;
-	String_init(out + j++, str->str + start, loc - start, (size_t)(loc - start));
-	while (j < *nsplit) {
+	String_init(out + j++, str->str + start, loc - start, 0);
+	while (j < count) {
 		start = loc + sep_size;
 		loc = String_find(str, sep, start, N);
-		String_init(out + j++, str->str + start, loc - start, (size_t)(loc - start));
+		String_init(out + j++, str->str + start, loc - start, 0);
 	}
+	start = loc + sep_size;
+	String_init(out + j++, str->str + start, N - start, 0);
+	*nsplit = j;
 	return out;
 }
 String * String_join(String const * restrict sep, ptrdiff_t n, 
 	String const * const restrict strings) {
+
+	if (!n) {
+		return NULL;
+	}
+
+	if (!sep) {
+		sep = &EMPTY_STRING;
+	}
 	
 	ptrdiff_t sep_size = String_len(sep);
 	ptrdiff_t min_size = (n - 1) * sep_size;
 	for (ptrdiff_t i = 0; i < n; i++) {
 		min_size += String_len(strings + i);
 	}
-	ptrdiff_t j = 0;
-	ptrdiff_t write = 0;
-	String * out = String_new(strings[j].str, strings[j].size, (size_t)min_size);
-	write += strings[j++].size;
-	while (j < n) {
-		// write separator
-		memcpy(out->str + write, sep->str, sep_size * sizeof(char));
-		write += sep_size;
-
-		// write next string
-		memcpy(out->str + write, strings[j].str, strings[j].size * sizeof(char));
-		write += strings[j].size;
+	String * out = String_new(strings[0].str, strings[0].size, 0);
+	if (!String_resize(out, min_size)) {
+		return NULL;
+	}
+	for (ptrdiff_t j = 1; j < n; j++) {
+		String_extend(out, sep);
+		String_extend(out, strings + j);
 	}
 	return out;
 }
